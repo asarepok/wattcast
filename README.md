@@ -72,10 +72,11 @@ pip install -r requirements.txt
 MATLAB with Simulink is only needed if you want to regenerate the panel
 cache or the simulated training data yourself. Running the CLI or the web
 app against already-trained models needs nothing beyond the Python
-environment above. Requires **MATLAB R2025a or R2025b** specifically
-(what `PVOutputSimulation2025a.slx` was built and is loaded against by both
-`.m` scripts below). For any other MATLAB version, contact hello@asare.me
-for a compatible model file.
+environment above. Requires **MATLAB R2025a or R2025b**: `simulink/PVOutputSimulation2025a.slx`
+is built for R2025a, `simulink/PVOutputSimulation.slx` for R2025b. The `.m`
+scripts below load `PVOutputSimulation2025a.slx` by default; on R2025b,
+point them at `PVOutputSimulation.slx` instead. For any other MATLAB
+version, contact hello@asare.me for a compatible model file.
 
 ## Reproducing the data pipeline
 
