@@ -27,3 +27,6 @@ output/figures/
 
 # Local scratch/logs
 *.log
+*.cmd
+*.bat
+*.sh
