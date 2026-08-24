@@ -217,6 +217,17 @@ itself: it asks the running MATLAB engine for its release and loads
 so there's nothing to configure by hand there, just install the
 matching `matlabengine` version above.
 
+You also need a supported C/C++ compiler configured in MATLAB (check
+with `mex -setup` in the MATLAB console). Every on-demand simulation
+call swaps in a different panel's physical part data before running,
+which forces Simscape to recompile its physical network solver from
+scratch each time, so without a compiler MATLAB falls back to a much
+slower path instead of erroring outright: every forecast will still
+work, just take minutes instead of seconds. On Windows, MathWorks'
+free "MinGW-w64 Compiler (C/C++)" Add-On (Home tab, Add-Ons, Get
+Add-Ons) is the easiest way to get one. macOS and Linux usually already
+have a supported compiler installed (Xcode Command Line Tools, gcc).
+
 ## What's not in this repo
 
 Three things, all regenerable from what IS committed here, left out via
