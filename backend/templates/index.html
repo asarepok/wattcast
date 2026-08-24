@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wattcast</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<svg style="display:none">
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+    <circle cx="12" cy="12" r="4.6"/>
+    <path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7L5.6 5.6"/>
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/>
+  </symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 21s-6.5-6.1-6.5-11A6.5 6.5 0 0 1 18.5 10c0 4.9-6.5 11-6.5 11Z"/>
+    <circle cx="12" cy="10" r="2.3"/>
+  </symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/>
+    <path d="M3.5 9.8h17M3.5 16h17M9.5 3.5v17M15.5 3.5v17"/>
+  </symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 9l6 6 6-6"/>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 13l4 4L19 7"/>
+  </symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/>
+    <path d="M12 11v5.5"/>
+    <circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10.5" cy="10.5" r="6.5"/>
+    <path d="M20 20l-4.8-4.8"/>
+  </symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 12H5M11 6l-6 6 6 6"/>
+  </symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12h14M13 6l6 6-6 6"/>
+  </symbol>
+  <symbol id="i-crosshair" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 2v3M12 19v3M22 12h-3M5 12H2"/>
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2"/>
+    <path d="M3.5 9.5h17M8 3v3.5M16 3v3.5"/>
+  </symbol>
+  <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 6l12 12M18 6L6 18"/>
+  </symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 20V10M12 20V4M18 20v-7"/>
+  </symbol>
+  <symbol id="i-cloud-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 8.5a4 4 0 0 1 7.4-2.1M16 8.6A3.6 3.6 0 0 1 15.6 15.8H7.8a3.3 3.3 0 0 1-.4-6.6 3.9 3.9 0 0 1 .4 0"/>
+    <path d="M4 5.5v-2M1.5 8H0M2.3 3.3L.9 1.9" transform="translate(1 -1)"/>
+  </symbol>
+  <symbol id="i-restart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>
+  </symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="12" cy="12" r="4.6" fill="currentColor" stroke="none"/>
+      <path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7L5.6 5.6"/>
+    </svg>
+    <span class="brand-word">Wattcast</span>
+  </div>
+  <div class="topbar-right">
+    <span id="clock-context" hidden></span>
+    <button class="topbar-link" id="topbar-performance-btn" type="button" hidden>
+      <svg><use href="#i-bars"/></svg>
+      Model performance
+    </button>
+    <button class="topbar-link" id="topbar-reset-btn" type="button" hidden>
+      <svg><use href="#i-restart"/></svg>
+      Start over
+    </button>
+    <button class="icon-btn" id="theme-toggle" title="Switch appearance" aria-label="Switch appearance">
+      <svg><use href="#i-moon"/></svg>
+    </button>
+  </div>
+</header>
+
+<button id="edit-setup-btn" class="floating-back-btn" type="button" title="Back to setup" hidden>
+  <svg><use href="#i-arrow-left"/></svg>
+  <span>Edit setup</span>
+</button>
+
+<div class="splash-view" id="splash-view" hidden>
+  <svg class="splash-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+    <circle cx="12" cy="12" r="4.6" fill="currentColor" stroke="none"/>
+    <path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7L5.6 5.6"/>
+  </svg>
+  <div class="splash-word fade-in" style="animation-delay:.25s">Wattcast</div>
+  <p class="splash-tagline fade-in" style="animation-delay:.45s">Your solar forecast, before the sun comes up.</p>
+  <p class="splash-hint fade-in" style="animation-delay:.7s">Tap to continue</p>
+</div>
+
+<div class="flow" id="flow-view" hidden>
+  <div class="flow-progress">
+    <i data-step="1"></i><i data-step="2"></i><i data-step="3"></i><i data-step="4"></i><i data-step="5"></i>
+  </div>
+
+  <div class="flow-step active" data-step="1">
+    <h1 class="flow-question">Who makes your panel?</h1>
+    <div class="search-field">
+      <svg><use href="#i-search"/></svg>
+      <input type="text" id="manufacturer-search" placeholder="Search 19 manufacturers">
+    </div>
+    <div class="chip-row" id="manufacturer-chips"></div>
+    <p class="empty-state" id="manufacturer-empty" hidden>No manufacturer matches that search.</p>
+    <div class="flow-nav">
+      <span></span>
+      <button class="btn btn-primary" id="step1-next" disabled>Continue <svg><use href="#i-arrow-right"/></svg></button>
+    </div>
+  </div>
+
+  <div class="flow-step" data-step="2">
+    <h1 class="flow-question">Which model?</h1>
+    <div class="search-field">
+      <svg><use href="#i-search"/></svg>
+      <input type="text" id="model-search" placeholder="Filter by model or wattage">
+    </div>
+    <div class="model-list" id="model-list"></div>
+    <p class="empty-state" id="model-empty" hidden>No model matches that search.</p>
+    <div class="flow-nav">
+      <button class="btn btn-ghost" id="step2-back"><svg><use href="#i-arrow-left"/></svg> Back</button>
+      <button class="btn btn-primary" id="step2-next" disabled>Continue <svg><use href="#i-arrow-right"/></svg></button>
+    </div>
+  </div>
+
+  <div class="flow-step" data-step="3">
+    <h1 class="flow-question">How many do you have?</h1>
+    <div class="stepper">
+      <button id="qty-minus" aria-label="Decrease">&minus;</button>
+      <input class="count tnum" id="qty-count" type="number" min="1" step="1" value="10" inputmode="numeric">
+      <button id="qty-plus" aria-label="Increase">+</button>
+    </div>
+    <p class="stepper-hint">Type a number directly for larger arrays.</p>
+    <p class="stepper-readout">Total system size: <strong id="qty-total-kw">3.2</strong> kW</p>
+    <div class="flow-nav">
+      <button class="btn btn-ghost" id="step3-back"><svg><use href="#i-arrow-left"/></svg> Back</button>
+      <button class="btn btn-primary" id="step3-next">Continue <svg><use href="#i-arrow-right"/></svg></button>
+    </div>
+  </div>
+
+  <div class="flow-step" data-step="4">
+    <h1 class="flow-question">Where's it installed?</h1>
+    <button class="location-cta" id="locate-btn">
+      <svg><use href="#i-crosshair"/></svg>
+      Use my current location
+    </button>
+    <div class="location-found" id="location-found">
+      <svg><use href="#i-check"/></svg>
+      <span id="location-found-text">Found: Accra, Ghana</span>
+    </div>
+    <p class="form-error" id="location-error" hidden></p>
+    <div class="location-divider">or</div>
+    <div class="location-search-wrap">
+      <div class="search-field">
+        <svg><use href="#i-pin"/></svg>
+        <input type="text" id="location-search" placeholder="Enter a city" autocomplete="off">
+      </div>
+      <div class="geocode-results" id="geocode-results" hidden></div>
+    </div>
+    <div class="flow-nav">
+      <button class="btn btn-ghost" id="step4-back"><svg><use href="#i-arrow-left"/></svg> Back</button>
+      <button class="btn btn-primary" id="step4-next">Continue <svg><use href="#i-arrow-right"/></svg></button>
+    </div>
+  </div>
+
+  <div class="flow-step" data-step="5">
+    <h1 class="flow-question">Which days do you want to see?</h1>
+    <p class="date-popover-hint">Tap a start day, then an end day, up to 14 days out, as far as live weather forecasts reach. Tap once for a single day. You can always change this later.</p>
+    <div class="day-strip" id="wizard-day-strip"></div>
+    <p class="range-summary" id="wizard-range-summary"></p>
+    <p class="form-error" id="wizard-error" hidden></p>
+    <div class="flow-nav">
+      <button class="btn btn-ghost" id="step5-back"><svg><use href="#i-arrow-left"/></svg> Back</button>
+      <button class="btn btn-primary" id="step5-next">See your forecast <svg><use href="#i-arrow-right"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-view" id="loading-view" hidden>
+  <div class="spinner" aria-hidden="true"></div>
+  <p id="loading-status">Fetching live weather&hellip;</p>
+</div>
+
+<div id="dashboard-view" style="display:none">
+
+<div class="dashboard-loading-overlay" id="dashboard-loading-overlay" hidden>
+  <div class="spinner" aria-hidden="true"></div>
+  <p>Updating your forecast&hellip;</p>
+</div>
+
+<section class="hero">
+  <div class="hero-text">
+    <p class="hero-eyebrow" id="hero-eyebrow">Forecast for Thursday, August 20</p>
+    <h1 class="hero-number fade-in" style="animation-delay:.05s">
+      <span id="hero-num">0</span><span class="hero-unit">kWh</span>
+    </h1>
+    <p class="hero-insight fade-in" style="animation-delay:.25s">
+      <svg><use href="#i-cloud-sun"/></svg>
+      <span id="hero-insight-text">A strong solar day, reaching 62% of your system's peak capacity</span>
+    </p>
+    <p class="hero-context fade-in" style="animation-delay:.35s" id="hero-context">
+      Amerisolar AS_6M30_HC_320W &times; 10 &middot; mostly clear, high of 31&deg;C
+    </p>
+  </div>
+  <div class="hero-chart">
+    <svg viewBox="0 0 460 170" id="hero-arc"></svg>
+  </div>
+</section>
+
+<section class="setup">
+  <div class="setup-row">
+    <div class="field field-system">
+      <label>Your system</label>
+      <div class="field-value">
+        <svg><use href="#i-panel"/></svg>
+        Amerisolar AS_6M30_HC_320W
+      </div>
+    </div>
+    <div class="field field-qty">
+      <label>Panels</label>
+      <div class="field-value"><input type="text" value="10" id="dashboard-qty-input"></div>
+    </div>
+    <div class="field field-location">
+      <label>Location</label>
+      <div class="field-value">
+        <svg><use href="#i-pin"/></svg>
+        Accra, Ghana
+      </div>
+    </div>
+    <div class="field field-date" id="date-field-wrap">
+      <label>Forecast dates</label>
+      <button class="field-value" id="date-field-btn" type="button">
+        <svg><use href="#i-calendar"/></svg>
+        <span id="date-field-text">Thu, Aug 20</span>
+      </button>
+      <div class="date-popover" id="date-popover" hidden>
+        <p class="date-popover-hint">Tap a start day, then an end day, up to 14 days out. Tap once for a single day.</p>
+        <div class="day-strip" id="day-strip"></div>
+      </div>
+    </div>
+    <button class="setup-advanced-toggle" id="advanced-toggle">
+      Advanced <svg><use href="#i-chevron"/></svg>
+    </button>
+    <button class="btn btn-primary" id="update-forecast-btn">Update forecast</button>
+  </div>
+
+  <p class="form-error" id="dashboard-error" hidden></p>
+
+  <div class="advanced-panel" id="advanced-panel">
+    <p>Every forecast is produced by one of three engines trained on this system's simulated output. Random Forest is the recommended default, and you can switch engines any time to compare.</p>
+    <div class="engine-options">
+      <div class="engine-option selected" data-engine="random_forest">
+        <div class="name">Random Forest <span class="badge">Recommended</span></div>
+        <div class="desc">Best overall accuracy across every panel model.</div>
+      </div>
+      <div class="engine-option" data-engine="lstm">
+        <div class="name">LSTM</div>
+        <div class="desc">A deep-learning second opinion, good for cross-checking.</div>
+      </div>
+      <div class="engine-option" data-engine="arima" id="engine-option-arima">
+        <div class="name">ARIMA</div>
+        <div class="desc">Trend-only baseline for 3 reference panels. Doesn't use weather.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="main">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Detailed forecast</h2>
+      <span class="hint" id="detail-hint">24-hour outlook</span>
+    </div>
+    <div class="panel-body" id="detail-charts"></div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:22px;">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Your system</h2>
+      </div>
+      <div class="panel-body">
+        <div class="stat-row">
+          <div class="stat">
+            <div class="label">Rated capacity</div>
+            <div class="value tnum" id="rated-value">3,204 W</div>
+            <div class="sub" id="rated-sub">320.4 W &times; 10 panels</div>
+          </div>
+          <div class="stat">
+            <div class="label">Peak forecast</div>
+            <div class="value tnum" id="peak-value">1,980 W</div>
+            <div class="sub" id="peak-sub">62% of rated, at 13:00</div>
+          </div>
+        </div>
+        <div class="capacity-bar"><div class="capacity-bar-fill" id="capacity-bar-fill" style="width:62%"></div></div>
+        <div class="spec-grid">
+          <div class="spec-row"><span class="k">Voc</span><span class="v tnum" id="spec-voc">40.2 V</span></div>
+          <div class="spec-row"><span class="k">Isc</span><span class="v tnum" id="spec-isc">8.86 A</span></div>
+          <div class="spec-row"><span class="k">Vmp</span><span class="v tnum" id="spec-vmp">32.8 V</span></div>
+          <div class="spec-row"><span class="k">Imp</span><span class="v tnum" id="spec-imp">8.31 A</span></div>
+          <div class="spec-row"><span class="k">Cells in series</span><span class="v tnum" id="spec-series">72</span></div>
+          <div class="spec-row"><span class="k">Parallel strings</span><span class="v tnum" id="spec-parallel">1</span></div>
+        </div>
+        <div class="info-note">
+          <svg><use href="#i-info"/></svg>
+          <p>Rated capacity is measured at Standard Test Conditions: 1,000 W/m&sup2; irradiance, 25&deg;C cell temperature. Real output tracks actual weather over the forecast period, so peak numbers usually land well under that.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Hourly breakdown</h2>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead id="hourly-thead"><tr><th>When</th><th>Power</th><th>Irradiance</th><th>Temp</th></tr></thead>
+          <tbody id="hourly-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /#dashboard-view -->
+
+<div class="modal-backdrop" id="performance-modal" hidden>
+  <div class="modal" role="dialog" aria-labelledby="performance-modal-title">
+    <div class="modal-header">
+      <h2 id="performance-modal-title">Model performance</h2>
+      <button class="icon-btn" id="close-performance-btn" aria-label="Close">
+        <svg><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-intro">Each engine is scored against real weather data it never trained on. Lower error and a higher R&sup2; both mean a closer match to actual output.</p>
+
+      <div class="applied-section">
+        <h3>What this means for your forecast</h3>
+        <p class="applied-intro">Your current forecast peaks at <strong id="applied-peak-value">1,980 W</strong>. Applying each engine's typical error (its MAE, from the table below) to that number shows how far off the real output could actually land.</p>
+        <div class="applied-row">
+          <div class="applied-engine"><span class="swatch" style="background:var(--sun-strong)"></span>Random Forest</div>
+          <div class="applied-range"><strong id="applied-range-rf">1,979.9 to 1,980.1 W</strong><span>&plusmn;0.11 W typical error</span></div>
+        </div>
+        <div class="applied-row">
+          <div class="applied-engine"><span class="swatch" style="background:var(--sky)"></span>LSTM</div>
+          <div class="applied-range"><strong id="applied-range-lstm">1,978.7 to 1,981.3 W</strong><span>&plusmn;1.33 W typical error</span></div>
+        </div>
+        <div class="applied-row">
+          <div class="applied-engine"><span class="swatch" style="background:var(--dusk)"></span>ARIMA</div>
+          <div class="applied-range"><strong id="applied-range-arima">1,916.0 to 2,044.0 W</strong><span>&plusmn;64.0 W typical error</span></div>
+        </div>
+      </div>
+
+      <h3 class="table-heading">Base values, from held-out test data</h3>
+      <div class="table-scroll">
+        <table class="metrics-table">
+          <thead>
+            <tr><th>Engine</th><th>R&sup2;</th><th>MAE</th><th>RMSE</th><th>MAPE</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="swatch" style="background:var(--sun-strong)"></span>Random Forest <span class="badge">Recommended</span></td>
+              <td class="tnum" id="perf-rf-r2">&hellip;</td>
+              <td class="tnum" id="perf-rf-mae">&hellip;</td>
+              <td class="tnum" id="perf-rf-rmse">&hellip;</td>
+              <td class="tnum" id="perf-rf-mape">&hellip;</td>
+            </tr>
+            <tr>
+              <td><span class="swatch" style="background:var(--sky)"></span>LSTM</td>
+              <td class="tnum" id="perf-lstm-r2">&hellip;</td>
+              <td class="tnum" id="perf-lstm-mae">&hellip;</td>
+              <td class="tnum" id="perf-lstm-rmse">&hellip;</td>
+              <td class="tnum" id="perf-lstm-mape">&hellip;</td>
+            </tr>
+            <tr>
+              <td><span class="swatch" style="background:var(--dusk)"></span>ARIMA</td>
+              <td class="tnum" id="perf-arima-r2">&hellip;</td>
+              <td class="tnum" id="perf-arima-mae">&hellip;</td>
+              <td class="tnum" id="perf-arima-rmse">&hellip;</td>
+              <td class="tnum" id="perf-arima-mape">&hellip;</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-note">
+        <svg><use href="#i-info"/></svg>
+        <p>ARIMA is fit separately for each panel and shown here for one representative model. It never sees weather, which is the main reason it trails Random Forest and LSTM so heavily.</p>
+      </div>
+      <dl class="metric-glossary">
+        <dt>R&sup2; (R-squared)</dt>
+        <dd>How much of the real change in output the model explains. 1.0 is a perfect match.</dd>
+        <dt>MAE (Mean Absolute Error)</dt>
+        <dd>The average size of the model's mistakes, in watts.</dd>
+        <dt>RMSE (Root Mean Squared Error)</dt>
+        <dd>Similar to MAE, but weighs large misses more heavily.</dd>
+        <dt>MAPE (Mean Absolute Percentage Error)</dt>
+        <dd>The average mistake as a percentage of actual output.</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
