@@ -117,9 +117,14 @@ def _num_days(start_date, end_date):
     return int((target_end - target_start) / pd.Timedelta(days=1)) + 1
 
 
-def _predict_arima(part_id, start_date, end_date, quantity, latitude=None, longitude=None):
+def _predict_arima(part_id, start_date, end_date, quantity, latitude=None, longitude=None,
+                    on_weather_fetched=None):
     # latitude/longitude accepted only so _DISPATCH can call every model
     # the same way. ARIMA never sees weather, so location is a no-op.
+    # on_weather_fetched is also accepted but never called: ARIMA has no
+    # weather-fetch step to hook into, so a caller wanting a simulation
+    # comparison against it has to fetch weather and trigger that
+    # itself (see backend/app.py).
     # ARIMA never sees weather: it can only extrapolate forward from
     # wherever its training data ends (recorded in train_end at fit
     # time, see training/train_arima.py). The further start_date is
@@ -167,7 +172,8 @@ def _load_random_forest():
     return _model_cache[cache_key]
 
 
-def _predict_random_forest(part_id, start_date, end_date, quantity, latitude=None, longitude=None):
+def _predict_random_forest(part_id, start_date, end_date, quantity, latitude=None, longitude=None,
+                            on_weather_fetched=None):
     _check_not_excluded(part_id, "Random Forest")
 
     specs = get_panel_specs(part_id)
@@ -181,6 +187,14 @@ def _predict_random_forest(part_id, start_date, end_date, quantity, latitude=Non
     # get_forecast() when omitted. RF has no temporal windowing, so
     # spanning more days is just more independent feature rows.
     df = get_forecast(start_date, end_date, latitude=latitude, longitude=longitude)
+
+    # Fires the instant weather is in hand, before the (fast) feature
+    # building and model.predict() below even run, so a caller wanting
+    # to also run a slow simulation against this same weather (see
+    # backend/app.py) can kick that off now and have it run genuinely
+    # concurrently with the rest of this prediction, not after it.
+    if on_weather_fetched is not None:
+        on_weather_fetched(df.copy())
 
     # Panel-spec + time features, built exactly the way common/features.py
     # /training/train_random_forest.py built them (same column names,
@@ -241,7 +255,8 @@ def _load_lstm():
     return _model_cache[cache_key]
 
 
-def _predict_lstm(part_id, start_date, end_date, quantity, latitude=None, longitude=None):
+def _predict_lstm(part_id, start_date, end_date, quantity, latitude=None, longitude=None,
+                   on_weather_fetched=None):
     _check_not_excluded(part_id, "LSTM")
 
     specs = get_panel_specs(part_id)
@@ -258,6 +273,14 @@ def _predict_lstm(part_id, start_date, end_date, quantity, latitude=None, longit
     window_start = target_start - pd.Timedelta(days=1)
     window_end = target_start + pd.Timedelta(hours=num_hours - 1)
     weather = get_forecast(window_start, window_end, latitude=latitude, longitude=longitude)
+
+    # Fires as soon as weather is in hand, same as _predict_random_forest,
+    # so a caller can run a simulation concurrently with the rest of this
+    # prediction. Trimmed to just the target range first (dropping the
+    # lookback day added above), since that's the same range a
+    # simulation comparison needs to match, not LSTM's own extra window.
+    if on_weather_fetched is not None:
+        on_weather_fetched(weather[weather["time"] >= target_start].copy())
 
     weather_scaled = scalers["weather"].transform(weather[WEATHER_FEATURES]).astype("float32")
 
@@ -304,7 +327,7 @@ _DISPATCH = {
 
 
 def predict_with_weather(part_id, start_date, end_date=None, model="random_forest", quantity=1,
-                          latitude=None, longitude=None):
+                          latitude=None, longitude=None, on_weather_fetched=None):
     """
     Forecast hourly power output for a panel over start_date..end_date
     (inclusive), plus the forecasted irradiance/temperature behind it.
@@ -324,6 +347,15 @@ def predict_with_weather(part_id, start_date, end_date=None, model="random_fores
                 site with very different conditions (e.g. much higher
                 latitude, different humidity/cloud regime) are an
                 extrapolation outside that training range.
+    on_weather_fetched: optional callback, called with the weather
+                DataFrame (matching the target range, "time" as a
+                column) the instant it's fetched, before the rest of
+                this prediction runs. Lets a caller kick off something
+                slow (e.g. a live simulation, see backend/app.py) on
+                that exact same weather, running concurrently with the
+                rest of this function rather than waiting for it to
+                finish first. Never called for ARIMA, which has no
+                weather-fetch step to hook into.
 
     Returns a ForecastResult(power, weather):
       power: pandas Series of hourly predicted-watt values (24 per
@@ -336,7 +368,8 @@ def predict_with_weather(part_id, start_date, end_date=None, model="random_fores
     if model not in _DISPATCH:
         raise ValueError(f"Unknown model '{model}'. Choose from: {list(_DISPATCH)}")
 
-    return _DISPATCH[model](part_id, start_date, end_date, quantity, latitude=latitude, longitude=longitude)
+    return _DISPATCH[model](part_id, start_date, end_date, quantity, latitude=latitude, longitude=longitude,
+                             on_weather_fetched=on_weather_fetched)
 
 
 def predict(part_id, start_date, end_date=None, model="random_forest", quantity=1,
