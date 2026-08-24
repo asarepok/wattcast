@@ -34,6 +34,7 @@ from common.dataset import EXCLUDED_PART_IDS
 from common.inference import ARIMA_PANELS, get_panel_specs, predict_with_weather
 from common.simulation import run_simulation
 from common.weather_api import get_forecast
+from evaluation.metrics import evaluate
 
 STC_IRRADIANCE_WM2 = 1000
 
@@ -132,10 +133,19 @@ def _build_forecast_payload(part_id, start_date, end_date, model, quantity, lati
             for ts, row in weather.iterrows()
         ]
     simulated_series = None
+    live_metrics = None
     if simulated is not None:
         simulated_series = [
             {"time": ts.isoformat(), "watts": float(w)} for ts, w in simulated.items()
         ]
+        # Real accuracy for this exact forecast, not the training-time
+        # held-out test set: y_true is the actual simulation, y_pred is
+        # what the model guessed, same evaluate() used to build the
+        # static output/tables/*.csv numbers, so the two stay
+        # methodologically comparable even though one's historical and
+        # one's live.
+        aligned_simulated = simulated.reindex(power.index)
+        live_metrics = evaluate(aligned_simulated.values, power.values)
 
     peak = max(power_series, key=lambda row: row["watts"])
     total_kwh = sum(row["watts"] for row in power_series) / 1000
@@ -156,6 +166,10 @@ def _build_forecast_payload(part_id, start_date, end_date, model, quantity, lati
     if simulated_series is not None:
         sim_total = sum(row["watts"] for row in simulated_series) / 1000
         log_lines.append(f"simulated total={sim_total:.2f} kWh (ground truth, same weather)")
+        log_lines.append(
+            f"live accuracy vs simulation: MAE={live_metrics['MAE']:.3f} W  "
+            f"RMSE={live_metrics['RMSE']:.3f} W  R2={live_metrics['R2']:.5f}"
+        )
     log_lines.append("=" * 72)
     app.logger.info("\n".join(log_lines))
 
@@ -173,6 +187,7 @@ def _build_forecast_payload(part_id, start_date, end_date, model, quantity, lati
         "power": power_series,
         "weather": weather_series,
         "simulated": simulated_series,
+        "live_metrics": live_metrics,
         "specs": specs,
         "rated_total_watts": specs["pmp"] * quantity,
         "stc_irradiance_wm2": STC_IRRADIANCE_WM2,
