@@ -16,10 +16,13 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-That's all you need to run the CLI or the web app against the models
-already trained here. MATLAB with Simulink only comes into play if you
-want to regenerate the panel cache or the simulated training data
-yourself, which the rest of this README walks through.
+That's the Python side sorted, but on its own it doesn't get you a working
+CLI or web app. `models/` isn't in this repo (around 23GB, GitHub isn't
+the place for that), so a fresh clone has no trained weights to actually
+forecast with. The rest of this README walks through the whole thing you
+actually need: getting the weather, simulating the panels in MATLAB, and
+training each model yourself, before the CLI or the web app has anything
+to run against.
 
 ## Where the weather comes from
 
@@ -171,11 +174,14 @@ prediction to the server console so you can show the raw model output
 next to the dashboard instead of just trusting the UI. Runs on Flask's
 debug server, fine for local use or a demo, not meant for production as-is.
 
-## Regenerating any of it yourself
+## Building it from scratch
 
-Only needed if `data/raw/panel_cache.db`, `data/processed/`, or
-`data/simulated/` are missing, everything above is already committed and
-trained. In order:
+`data/raw/` (panel specs + historical weather, both small) is the only
+piece actually committed to this repo. Everything else, the simulated
+data, the processed training set, every trained model, is over 30GB
+combined and isn't here, so this is the real starting point on a fresh
+clone, not just something to run if a file happens to be missing. In
+order:
 
 1. `scripts/preprocess_weather_data.py` to sanity-check the raw weather
    export first (see "Where the weather comes from"). Not a hard
