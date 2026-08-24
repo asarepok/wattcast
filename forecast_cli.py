@@ -22,6 +22,7 @@ import pandas as pd
 
 from common.dataset import EXCLUDED_PART_IDS
 from common.inference import get_panel_specs, predict_with_weather
+from common.simulation import run_simulation
 
 # Rated Pmax on any datasheet is measured at Standard Test Conditions:
 # 1000 W/m^2 irradiance, 25C cell temperature. Shown as a reference line
@@ -174,16 +175,17 @@ def prompt_for_quantity():
         return 1
 
 
-def print_forecast(part_id, date, model, quantity, forecast, weather):
+def print_forecast(part_id, date, model, quantity, forecast, weather, simulated=None):
     print(f"\nForecast for {part_id} x{quantity} on {date} ({model})")
 
     if weather is None:
-        # ARIMA: no weather involved at all, power only.
+        # ARIMA: no weather involved at all, power only, and nothing to
+        # run a matching simulation against either.
         print("-" * 50)
         for ts, watts in forecast.items():
             print(f"  {ts.strftime('%H:%M')}  {watts:8.1f} W")
         print("-" * 50)
-    else:
+    elif simulated is None:
         header = f"  {'Time':<6} {'Power (W)':>10} {'Irradiance (W/m2)':>19} {'Temp (C)':>9}"
         print("-" * len(header))
         print(header)
@@ -193,8 +195,27 @@ def print_forecast(part_id, date, model, quantity, forecast, weather):
             temp = weather.loc[ts, "temperature_2m_c"]
             print(f"  {ts.strftime('%H:%M'):<6} {watts:>10.1f} {irr:>19.1f} {temp:>9.1f}")
         print("-" * len(header))
+    else:
+        header = (f"  {'Time':<6} {'Power (W)':>10} {'Simulated (W)':>14} "
+                   f"{'Irradiance (W/m2)':>19} {'Temp (C)':>9}")
+        print("-" * len(header))
+        print(header)
+        print("-" * len(header))
+        for ts, watts in forecast.items():
+            sim_watts = simulated.loc[ts]
+            irr = weather.loc[ts, "shortwave_radiation_wm2"]
+            temp = weather.loc[ts, "temperature_2m_c"]
+            print(f"  {ts.strftime('%H:%M'):<6} {watts:>10.1f} {sim_watts:>14.1f} "
+                  f"{irr:>19.1f} {temp:>9.1f}")
+        print("-" * len(header))
 
-    print(f"  Daily total: {forecast.sum() / 1000:.2f} kWh")
+    print(f"  Daily total (model):      {forecast.sum() / 1000:.2f} kWh")
+    if simulated is not None:
+        sim_total = simulated.sum() / 1000
+        model_total = forecast.sum() / 1000
+        diff_pct = (model_total - sim_total) / sim_total * 100 if sim_total else 0.0
+        print(f"  Daily total (simulated):  {sim_total:.2f} kWh")
+        print(f"  Difference:               {model_total - sim_total:+.2f} kWh ({diff_pct:+.1f}%)")
 
 
 def print_panel_specs(specs, quantity, forecast):
@@ -220,7 +241,7 @@ def print_panel_specs(specs, quantity, forecast):
     print(f"\n  Peak predicted:   {peak:.1f} W of {rated_total:.1f} W rated ({peak / rated_total * 100:.1f}%)")
 
 
-def plot_forecast(specs, date, model, quantity, forecast, weather):
+def plot_forecast(specs, date, model, quantity, forecast, weather, simulated=None):
     rated_total = specs["pmp"] * quantity
     peak_idx = int(forecast.values.argmax())
     peak_time = forecast.index[peak_idx]
@@ -236,6 +257,9 @@ def plot_forecast(specs, date, model, quantity, forecast, weather):
         fig, ax_power = plt.subplots(figsize=(9, 5))
 
     ax_power.plot(forecast.index, forecast.values, color="#2a78d6", linewidth=2, label="Predicted power")
+    if simulated is not None:
+        ax_power.plot(simulated.index, simulated.values, color="#e34948", linewidth=1.5,
+                      linestyle=":", label="Simulated (ground truth)")
     ax_power.axhline(rated_total, color="#71706b", linestyle="--", linewidth=1.5,
                       label=f"Rated capacity ({rated_total:.0f} W)")
     ax_power.annotate(f"{peak_val:.0f} W", xy=(peak_time, peak_val), xytext=(0, 10),
@@ -324,7 +348,25 @@ def main():
     except (ValueError, NotImplementedError) as e:
         raise SystemExit(f"\nError: {e}")
 
-    print_forecast(part_id, date, model, quantity, forecast, weather)
+    # Every forecast against real weather also gets checked against the
+    # actual Simscape Electrical simulation on that same weather, not
+    # just the model's own idea of what it should be. ARIMA has no
+    # weather to match a simulation against in the first place, so this
+    # is skipped for it. A first run pays MATLAB's own startup cost
+    # (engine + model load, under a minute); it's cached in
+    # common/simulation.py, so any later forecast in this same process
+    # is fast.
+    simulated = None
+    if weather is not None:
+        print(f"Running live Simulink simulation on the same weather for comparison "
+              f"(this can take up to a minute the first time)...")
+        try:
+            simulated = run_simulation(part_id, weather) * quantity
+        except Exception as e:
+            print(f"Couldn't run the simulation comparison: {e}")
+            print("Continuing with just the model's forecast.")
+
+    print_forecast(part_id, date, model, quantity, forecast, weather, simulated)
 
     try:
         specs = get_panel_specs(part_id)
@@ -333,7 +375,7 @@ def main():
 
     if specs:
         print_panel_specs(specs, quantity, forecast)
-        plot_forecast(specs, date, model, quantity, forecast, weather)
+        plot_forecast(specs, date, model, quantity, forecast, weather, simulated)
 
 
 if __name__ == "__main__":
