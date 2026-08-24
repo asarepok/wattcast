@@ -6,10 +6,6 @@ it'll really produce given tomorrow's actual clouds and temperature. Three
 models get compared head to head (Random Forest, LSTM, ARIMA), and the
 best of them ends up running a live web dashboard, Wattcast.
 
-This README follows the whole thing in order: where the data actually
-comes from, how it gets simulated, how the models get trained and scored,
-and how you'd run any of it yourself.
-
 ## Setup
 
 Needs Python 3.12, that's what this was built and tested on.
