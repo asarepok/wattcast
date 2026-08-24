@@ -202,6 +202,14 @@ you'll need to point them at the other file instead. Got a different
 MATLAB version? Email hello@asare.me and I'll sort you out a compatible
 model file.
 
+The `matlabengine` pip package (used by the dashboard and CLI to run a
+live simulation alongside every forecast) is version-locked to a
+specific MATLAB release too, separately from the model files above.
+`requirements.txt` pins `matlabengine==25.1.2`, which only works with
+MATLAB R2025a. If you're on R2025b, install `matlabengine==25.2.2`
+instead, matching your installed MATLAB version exactly, or every
+`matlab.engine` call will fail to start.
+
 ## What's not in this repo
 
 Three things, all regenerable from what IS committed here, left out via
