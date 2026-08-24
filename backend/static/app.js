@@ -1441,14 +1441,14 @@
 
       document.getElementById("applied-intro-text").innerHTML =
         modelName + " predicted a peak of <strong>" + Math.round(peakVal).toLocaleString() + " W</strong>. " +
-        "The actual Simscape Electrical simulation on this same weather peaked at <strong>" +
+        "The actual simulation on this same weather peaked at <strong>" +
         Math.round(simPeak).toLocaleString() + " W</strong>.";
       document.getElementById("applied-engine-swatch").style.background = modelColors[data.model] || modelColors.random_forest;
       document.getElementById("applied-engine-name").textContent = modelName;
       document.getElementById("applied-live-error").textContent =
         "±" + data.live_metrics.MAE.toFixed(2) + " W";
       document.getElementById("applied-live-detail").textContent =
-        "typical error on this forecast (RMSE " + data.live_metrics.RMSE.toFixed(2) + " W)";
+        "off on this forecast (RMSE " + data.live_metrics.RMSE.toFixed(2) + " W)";
       appliedRow.hidden = false;
     } else {
       document.getElementById("applied-intro-text").textContent =

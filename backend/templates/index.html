@@ -264,7 +264,7 @@
   <p class="form-error" id="dashboard-error" hidden></p>
 
   <div class="advanced-panel" id="advanced-panel">
-    <p>Every forecast is produced by one of three engines trained on this system's simulated output. Random Forest is the recommended default, and you can switch engines any time to compare.</p>
+    <p>Every forecast comes from one of three engines, each trained on this system's simulated output. Random Forest is the default since it's the most accurate, but you can switch anytime to compare.</p>
     <div class="engine-options">
       <div class="engine-option selected" data-engine="random_forest">
         <div class="name">Random Forest <span class="badge">Recommended</span></div>
@@ -320,7 +320,7 @@
         </div>
         <div class="info-note">
           <svg><use href="#i-info"/></svg>
-          <p>Rated capacity is measured at Standard Test Conditions: 1,000 W/m&sup2; irradiance, 25&deg;C cell temperature. Real output tracks actual weather over the forecast period, so peak numbers usually land well under that.</p>
+          <p>Rated capacity assumes ideal lab conditions: 1,000 W/m&sup2; of sunlight, 25&deg;C panel temperature. Real weather is rarely that generous, so your actual peak usually lands under it.</p>
         </div>
       </div>
     </div>
@@ -350,18 +350,18 @@
       </button>
     </div>
     <div class="modal-body">
-      <p class="modal-intro">Each engine is scored against real weather data it never trained on. Lower error and a higher R&sup2; both mean a closer match to actual output.</p>
+      <p class="modal-intro">Each engine is tested against real weather it never saw during training. Lower error and a higher R&sup2; both mean it's closer to what actually happened.</p>
 
       <div class="applied-section">
-        <h3>How this forecast actually did</h3>
-        <p class="applied-intro" id="applied-intro-text">Run a forecast to see it compared against the real Simscape Electrical simulation on the same weather.</p>
+        <h3>How accurate was this forecast?</h3>
+        <p class="applied-intro" id="applied-intro-text">Run a forecast and we'll compare it against the real simulation on that same weather.</p>
         <div class="applied-row" id="applied-live-row" hidden>
           <div class="applied-engine"><span class="swatch" id="applied-engine-swatch"></span><span id="applied-engine-name">Random Forest</span></div>
-          <div class="applied-range"><strong id="applied-live-error">&plusmn;0.00 W</strong><span id="applied-live-detail">typical error on this forecast</span></div>
+          <div class="applied-range"><strong id="applied-live-error">&plusmn;0.00 W</strong><span id="applied-live-detail">off on this forecast</span></div>
         </div>
       </div>
 
-      <h3 class="table-heading">Base values, from held-out test data</h3>
+      <h3 class="table-heading">Overall accuracy by engine</h3>
       <div class="table-scroll">
         <table class="metrics-table">
           <thead>
@@ -394,7 +394,7 @@
       </div>
       <div class="info-note">
         <svg><use href="#i-info"/></svg>
-        <p>ARIMA is fit separately for each panel and shown here for one representative model. It never sees weather, which is the main reason it trails Random Forest and LSTM so heavily.</p>
+        <p>ARIMA is trained separately for each panel, and this shows just one example. It never looks at the weather, which is the main reason it falls behind Random Forest and LSTM.</p>
       </div>
       <dl class="metric-glossary">
         <dt>R&sup2; (R-squared)</dt>
