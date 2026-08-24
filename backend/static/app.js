@@ -1074,18 +1074,21 @@
 
     var refBits = [];
     if (opts.ref) refBits.push('<span>' + opts.refLabel + '</span>');
+
+    // Same weight and size as the chart's own title, right next to it,
+    // not tucked into the small faint reference area on the right:
+    // this identifies a whole second data series plotted on the
+    // chart, not a secondary detail like the rated-capacity line.
+    var titleBits = '<div class="metric-title"><span class="swatch" style="background:' + opts.color + '"></span>' + opts.title + '</div>';
     if (opts.compareValues) {
-      refBits.push(
-        '<span class="metric-compare-label"><span class="swatch swatch-dotted" style="border-color:' +
-        opts.compareColor + '"></span>' + opts.compareLabel + '</span>'
-      );
+      titleBits += '<div class="metric-title"><span class="swatch" style="background:' + opts.compareColor + '"></span>' + opts.compareLabel + '</div>';
     }
 
     var block = document.createElement("div");
     block.className = "metric-block";
     block.innerHTML =
       '<div class="metric-head">' +
-        '<div class="metric-title"><span class="swatch" style="background:' + opts.color + '"></span>' + opts.title + '</div>' +
+        '<div class="metric-title-group">' + titleBits + '</div>' +
         (refBits.length ? '<div class="metric-ref">' + refBits.join(" &middot; ") + '</div>' : '') +
       '</div>' +
       '<svg viewBox="0 0 ' + w + ' ' + h + '">' + svgParts.join("") + '</svg>';
@@ -1327,7 +1330,7 @@
       title: "Power (W)", color: "var(--sun-strong)", values: power, zeroBased: true,
       ref: ratedTotal, refLabel: "Rated capacity &middot; " + ratedTotal.toLocaleString() + " W",
       annotatePeak: true, peakLabel: Math.round(peakVal).toLocaleString() + " W",
-      compareValues: simulatedValues, compareColor: "var(--ink)", compareLabel: "Simulated (ground truth)",
+      compareValues: simulatedValues, compareColor: "var(--ink)", compareLabel: "Simulated (W)",
       showAxis: true, timestamps: timestamps
     });
     if (hasWeather) {

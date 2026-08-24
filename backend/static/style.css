@@ -755,7 +755,8 @@
     margin-bottom: 6px;
   }
 
-  .metric-title { font-size: 0.85rem; font-weight: 700; }
+  .metric-title-group { display: flex; align-items: baseline; gap: 16px; }
+  .metric-title { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; }
   .metric-title .swatch {
     display: inline-block;
     width: 8px; height: 8px;
@@ -763,15 +764,6 @@
     margin-right: 6px;
   }
   .metric-ref { font-size: 0.74rem; color: var(--ink-faint); display: flex; align-items: center; gap: 6px; }
-  .metric-compare-label { display: inline-flex; align-items: center; }
-  .swatch-dotted {
-    display: inline-block;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--ink);
-    opacity: 0.55;
-    margin-right: 6px;
-  }
 
   .metric-block svg { width: 100%; height: auto; display: block; overflow: visible; }
 
