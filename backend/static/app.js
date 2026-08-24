@@ -982,6 +982,22 @@
     return d;
   }
 
+  // Holds each point's value flat until the next one, then steps: the
+  // honest shape for an hourly reading (it's not actually smoothly
+  // continuous between hours, that value just held for that whole
+  // hour), unlike smoothLine()'s curve fit, which implies a
+  // continuity the data doesn't really have. Segments share endpoints
+  // (no gaps between one hour's top and the next), so this reads as a
+  // single joined silhouette, not a row of disconnected bars.
+  function stepLine(points) {
+    if (points.length < 2) return "";
+    var d = "M " + points[0].x + "," + points[0].y;
+    for (var i = 1; i < points.length; i++) {
+      d += " L " + points[i].x + "," + points[i - 1].y + " L " + points[i].x + "," + points[i].y;
+    }
+    return d;
+  }
+
   function toPoints(values, w, h, padTop, minVal, maxVal) {
     var n = values.length;
     return values.map(function (v, i) {
@@ -1053,19 +1069,34 @@
       var ry = Y(opts.ref);
       svgParts.push('<line class="metric-ref-line" x1="' + padLeft + '" x2="' + w + '" y1="' + ry + '" y2="' + ry + '"/>');
     }
-    svgParts.push('<path class="metric-line" d="' + line + '" stroke="' + opts.color + '"/>');
+
+    // Both series get a shaded area down to the chart's own floor, in
+    // their own color, at partial opacity. Wherever they overlap, the
+    // two fills stack and blend into a third, visibly different tone
+    // (plain alpha compositing, no special blend mode needed), so
+    // agreement between the two series reads directly as a color, not
+    // something you have to infer from how close two lines look.
+    // Simulated is stepped, not curve-fit like the main line: it's an
+    // hourly reading, not a continuous quantity, so smoothly
+    // interpolating between hours would just be inventing shape the
+    // data doesn't have. Segments share endpoints, so this still reads
+    // as one joined silhouette, never a row of disconnected bars.
+    var baseline = Y(min);
     if (opts.compareValues) {
-      // Small dots at each real hourly point, not a continuous stroke:
-      // a stroke wide enough to guarantee visibility when the two
-      // series are pixel-identical (which they often are here) reads
-      // as a thick, muddy halo. Dots drawn on top stay compact and
-      // legible either way, sitting quietly on the line where the
-      // values agree and standing off it exactly where they don't.
-      var compareDots = opts.compareValues.map(function (v, i) {
-        return '<circle class="metric-compare-dot" cx="' + X(i) + '" cy="' + Y(v) + '" r="2"/>';
-      }).join("");
-      svgParts.push('<g fill="' + opts.compareColor + '">' + compareDots + '</g>');
+      var comparePts = opts.compareValues.map(function (v, i) { return { x: X(i), y: Y(v) }; });
+      var compareStep = stepLine(comparePts);
+      var compareArea = compareStep +
+        " L " + comparePts[comparePts.length - 1].x + "," + baseline +
+        " L " + comparePts[0].x + "," + baseline + " Z";
+      svgParts.push('<path class="metric-area" fill="' + opts.compareColor + '" d="' + compareArea + '"/>');
     }
+    var powerArea = line + " L " + pts[pts.length - 1].x + "," + baseline + " L " + pts[0].x + "," + baseline + " Z";
+    svgParts.push('<path class="metric-area" fill="' + opts.color + '" d="' + powerArea + '"/>');
+
+    if (opts.compareValues) {
+      svgParts.push('<path class="metric-line-compare" d="' + compareStep + '" stroke="' + opts.compareColor + '"/>');
+    }
+    svgParts.push('<path class="metric-line" d="' + line + '" stroke="' + opts.color + '"/>');
     if (opts.annotatePeak) {
       var peakIdx = vals.indexOf(Math.max.apply(null, vals));
       svgParts.push('<circle class="metric-peak" cx="' + pts[peakIdx].x + '" cy="' + pts[peakIdx].y + '" r="4" stroke="' + opts.color + '"/>');

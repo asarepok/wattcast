@@ -770,15 +770,12 @@
   .metric-grid { stroke: var(--border); stroke-width: 1; }
   .metric-day-divider { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
   .metric-line { fill: none; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
-  /* Small dots at each real hourly point, not a stroke: Random Forest
-     tracks the real simulation so closely (often well under 1W apart)
-     that a same-or-thinner compare line gets fully covered by the main
-     one and reads as "no comparison at all" (shipped once already), and
-     a stroke wide enough to guarantee visibility regardless read as a
-     thick, muddy halo (also shipped once). Compact dots stay legible
-     either way: quiet where the values agree, clearly offset from the
-     line exactly where they don't. */
-  .metric-compare-dot { opacity: 0.55; stroke: var(--surface); stroke-width: 1; }
+  .metric-line-compare { fill: none; stroke-width: 1.75; stroke-linejoin: round; }
+  /* Partial opacity on purpose: two of these stacked (the model's
+     forecast and the simulated comparison) is what makes their overlap
+     blend into a visibly distinct third color, the actual point of
+     shading both areas rather than just drawing two lines. */
+  .metric-area { opacity: 0.32; }
   .metric-ref-line { fill: none; stroke: var(--ink-faint); stroke-width: 1.25; stroke-dasharray: 5 4; }
   .metric-tick { font-size: 10px; fill: var(--ink-faint); font-family: "Public Sans", sans-serif; }
   .metric-peak { fill: var(--surface); stroke-width: 2.25; }
