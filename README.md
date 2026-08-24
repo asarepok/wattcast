@@ -1,26 +1,24 @@
 # Wattcast: Solar Output Forecasting Using Time Series and Machine Learning
 
-Forecasts hourly solar panel power output using live weather data and one of
-three models: Random Forest, LSTM, or ARIMA. Includes a command-line tool, a
-web dashboard ("Wattcast"), and the full pipeline behind them: MATLAB/Simulink
-panel simulation, data preprocessing, model training, and evaluation.
+Forecasts hourly solar panel output using live weather and one of three
+models, Random Forest, LSTM, or ARIMA. Comes with a CLI, a web dashboard
+(Wattcast), and the whole pipeline behind it: Simulink panel simulation,
+data prep, model training, and evaluation.
 
 ## Screenshots
 
-**Forecast dashboard**, live weather behind an hourly power forecast for a
-chosen panel, quantity, location, and date range:
+**Forecast dashboard**: pick a panel, quantity, location, and date range,
+get an hourly forecast backed by live weather.
 
 ![Wattcast forecast dashboard](docs/screenshots/dashboard.png)
 
-**Model performance comparison**, real evaluation metrics for all three
-engines, plus what each engine's typical error means for the current
-forecast:
+**Model performance**: real evaluation numbers for all three engines, and
+what each one's typical error actually means for your current forecast.
 
 ![Model performance modal](docs/screenshots/model-performance.png)
 
-**Simulink panel simulation model**, the Simscape Electrical circuit behind
-every panel's simulated hourly output (irradiance and temperature in,
-current/voltage/power out):
+**Simulink model**: the actual circuit behind every panel's simulated
+output. Irradiance and temperature go in, current/voltage/power comes out.
 
 ![Simulink block diagram](docs/screenshots/simulink-model.png)
 
@@ -37,31 +35,30 @@ Simulink panel simulation (simulink/)
     -> forecast_cli.py  and  backend/ (the Wattcast web app)
 ```
 
-`common/` is the one place both the CLI and the web app call into for an
-actual forecast. Neither the CLI nor the backend duplicates any forecasting
-logic; they're thin wrappers that turn a terminal argument or an HTTP request
-into a call against `common/inference.py`.
+`common/` is the only place either the CLI or the web app actually calls to
+get a forecast. Neither one duplicates any forecasting logic, they're both
+just thin wrappers turning a terminal argument or an HTTP request into a
+call to `common/inference.py`.
 
 ## What's NOT in this repository
 
-Three things are deliberately excluded via `.gitignore`, all regenerable from
-what IS committed:
+Three things are left out on purpose (see `.gitignore`), all regenerable
+from what IS committed here:
 
-- `data/processed/` and `data/simulated/` (roughly 6 GB): pipeline-generated
-  training data. Regenerate via `simulink/` and `scripts/` (see below).
-- `models/` (roughly 23 GB): trained model weights. Regenerate via
-  `training/` (see below). The Random Forest model alone is around 17 GB on
-  disk once trained, since it's 200 trees grown to full depth on a 22M+ row
-  dataset; loading it cold takes on the order of 15-20 seconds even after
-  training, which is expected, not a bug.
+- `data/processed/` and `data/simulated/`, about 6GB of pipeline-generated
+  training data. Regenerate it via `simulink/` and `scripts/` below.
+- `models/`, about 23GB of trained weights. Regenerate via `training/`
+  below. Random Forest alone is around 17GB once trained (200 trees, full
+  depth, 22M+ rows), so loading it cold takes 15-20 seconds even after
+  training's already done. That's expected, not a bug.
 
-`data/raw/` (under 6 MB: the panel spec database and the historical weather
-export) IS committed, since both are small and needed to run anything at all
-without regenerating them from MATLAB first.
+`data/raw/` (under 6MB: the panel spec database and the historical weather
+export) IS committed though, since it's tiny and you need it to run
+anything at all without regenerating stuff from MATLAB first.
 
 ## Setup
 
-Requires Python 3.12 (this is what the project was built and tested against).
+Needs Python 3.12, that's what this was built and tested on.
 
 ```
 python3 -m venv .venv
@@ -69,45 +66,43 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-MATLAB with Simulink is only needed if you want to regenerate the panel
+You only need MATLAB with Simulink if you want to regenerate the panel
 cache or the simulated training data yourself. Running the CLI or the web
-app against already-trained models needs nothing beyond the Python
-environment above. Requires **MATLAB R2025a or R2025b**: `simulink/PVOutputSimulation2025a.slx`
-is built for R2025a, `simulink/PVOutputSimulation.slx` for R2025b. The `.m`
-scripts below load `PVOutputSimulation2025a.slx` by default; on R2025b,
-point them at `PVOutputSimulation.slx` instead. For any other MATLAB
-version, contact hello@asare.me for a compatible model file.
+app off already-trained models doesn't need anything beyond the Python
+setup above. Needs MATLAB R2025a or R2025b: `PVOutputSimulation2025a.slx`
+is for R2025a, `PVOutputSimulation.slx` is for R2025b. The `.m` scripts
+load the 2025a one by default, so on R2025b you'll need to point them at
+the other file instead. Got a different MATLAB version? Email
+hello@asare.me and I'll sort you out a compatible model file.
 
 ## Reproducing the data pipeline
 
 Only needed if `data/raw/panel_cache.db`, `data/processed/`, or
-`data/simulated/` don't already exist. Run in this order, each step depends
-on the one before it:
+`data/simulated/` are missing. Run these in order, each one depends on the
+last:
 
-1. `simulink/generate_panel_cache.m` characterizes every Solar Cell part in
-   the Simscape Electrical collection (temperature/irradiance curves, IV
-   curve, rated specs) and writes them to `data/raw/panel_cache.db`. This
-   has to run first: step 2 reads the panel list straight out of this
-   database, it doesn't work from the Simulink part collection directly.
-   `data/raw/panel_cache.db` is already committed to this repo, so this
-   step is only needed if you've deleted it or want to regenerate it
-   (e.g. after the part collection changes).
-2. `simulink/generate_training_data_all_panels.m` reads `panel_cache.db`
-   for the list of panels, loads `PVOutputSimulation2025a.slx`, and
-   simulates every panel's hourly output against the historical weather
-   record (`data/raw/weather_data.csv`), writing the raw simulated dataset
-   to `data/simulated/training_data_all_panels.csv` (large: several GB).
-3. `scripts/preprocess_weather_data.py` cleans the raw Open-Meteo weather
-   export (`data/raw/weather_data.csv`) and checks it for missing values,
-   duplicate timestamps, gaps in the hourly sequence, and out-of-range
-   readings.
-4. `scripts/finalize_training_data.py` merges the simulated power data with
-   the cleaned weather data and panel specs into the final training table
-   used by every model.
+1. `simulink/generate_panel_cache.m` goes through every Solar Cell part in
+   the Simscape Electrical collection and pulls its specs (temperature/
+   irradiance curves, IV curve, rated values) into
+   `data/raw/panel_cache.db`. This one has to go first: step 2 reads the
+   panel list straight from this database, not from the Simulink
+   collection itself. It's already committed here, so you only need to run
+   this again if you've deleted it or the part collection's changed.
+2. `simulink/generate_training_data_all_panels.m` reads the panel list from
+   `panel_cache.db`, loads `PVOutputSimulation2025a.slx`, and simulates
+   every panel's hourly output against the historical weather
+   (`data/raw/weather_data.csv`). Writes out
+   `data/simulated/training_data_all_panels.csv`, which is big, several GB.
+3. `scripts/preprocess_weather_data.py` cleans up the raw Open-Meteo
+   weather export and checks it for missing values, duplicate timestamps,
+   gaps in the hourly sequence, and readings that are just out of range.
+4. `scripts/finalize_training_data.py` merges the simulated power data, the
+   cleaned weather, and the panel specs into one final training table.
+   This is what every model actually trains on.
 
 ## Training the models
 
-Each script is independent and writes its own results:
+Each script runs on its own and writes its own results:
 
 ```
 python training/train_random_forest.py
@@ -115,10 +110,10 @@ python training/train_lstm.py
 python training/train_arima.py           # add --force to refit even if a saved model exists
 ```
 
-All three read `data/processed/` and write to `models/` plus a results CSV
-in `output/tables/`. Random Forest and LSTM train on the full 235-panel
-dataset; ARIMA fits a separate model per representative panel (small/medium/
-large rated capacity) since it has no way to generalize across panels.
+All three read from `data/processed/` and write to `models/`, plus a
+results CSV in `output/tables/`. Random Forest and LSTM train on all 235
+panels at once. ARIMA fits a separate model per representative panel
+(small/medium/large) since it can't generalize across panels at all.
 
 Real evaluation results from the last training run (see `output/tables/`):
 
@@ -128,15 +123,15 @@ Real evaluation results from the last training run (see `output/tables/`):
 | LSTM | 1.33 | 2.11 | 5.85 | 0.99960 |
 | ARIMA (avg across 3 panels) | 69.31 | 78.96 | 54.64 | 0.17663 |
 
-R2 is shown to 5 decimal places specifically because Random Forest's real
-value (0.9999935870843596) is not exactly 1.0, and rounding it to fewer
-decimals would misleadingly suggest a perfect fit.
+R2 is shown to 5 decimal places on purpose. Random Forest's real number
+(0.9999935870843596) isn't actually 1.0, and rounding it any less would
+make it look like a perfect fit when it's not.
 
-ARIMA trails the other two by a wide margin because it never sees weather;
-it can only extrapolate a panel's own past output forward in time. It's kept
-in the comparison specifically to show how much a weather-aware model gains
-over a purely historical baseline. It's also the only one of the three not
-wired into the deployed web app, for that same reason.
+ARIMA trails the other two by a lot because it never sees weather at all,
+it just extrapolates a panel's own past output forward in time. It's still
+in the comparison to show how much you actually gain from a weather-aware
+model over a plain historical one. It's also the only one of the three not
+wired into the web app, same reason.
 
 ## Running the command-line tool
 
@@ -147,8 +142,8 @@ python forecast_cli.py --list-panels --search amerisolar
 python forecast_cli.py --help
 ```
 
-Prints an hourly forecast table to the terminal and saves a plot (power,
-irradiance, and temperature as small multiples) to `output/figures/`.
+Prints an hourly forecast straight to the terminal and saves a plot
+(power, irradiance, temperature) to `output/figures/`.
 
 ## Running the web app
 
@@ -156,15 +151,16 @@ irradiance, and temperature as small multiples) to `output/figures/`.
 python backend/app.py
 ```
 
-Then open `http://127.0.0.1:5000`. The setup wizard walks through picking a
-panel, quantity, and location (real GPS via the browser, or a city search,
-both backed by free/keyless geocoding APIs), then shows a forecast dashboard
-with live Open-Meteo weather behind it. Runs in Flask's debug server, which
-is fine for local use or a demo but isn't meant for production deployment.
+Then open `http://127.0.0.1:5000`. The setup wizard walks you through
+picking a panel, quantity, and location, real GPS through the browser or
+just search a city, both use free geocoding APIs, no key needed. Then you
+get the forecast dashboard with live Open-Meteo weather behind it. It runs
+on Flask's debug server, which is fine for local use or a demo, just don't
+put this in production as-is.
 
-Every forecast request also prints the full hourly prediction to the server
-console, useful for showing the raw model output alongside the dashboard
-rather than just trusting the UI.
+Every forecast also prints the full hourly prediction to the server
+console, so you can show the raw model output side by side with the
+dashboard instead of just trusting the UI.
 
 ## Project layout
 
