@@ -50,23 +50,38 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-MATLAB with Simulink is only needed if you want to regenerate the simulated
-training data yourself. Running the CLI or the web app against already-
-trained models needs nothing beyond the Python environment above.
+MATLAB with Simulink is only needed if you want to regenerate the panel
+cache or the simulated training data yourself. Running the CLI or the web
+app against already-trained models needs nothing beyond the Python
+environment above. Requires **MATLAB R2025a or R2025b** specifically
+(what `PVOutputSimulation2025a.slx` was built and is loaded against by both
+`.m` scripts below). For any other MATLAB version, contact hello@asare.me
+for a compatible model file.
 
 ## Reproducing the data pipeline
 
-Only needed if `data/processed/` or `data/simulated/` don't already exist.
+Only needed if `data/raw/panel_cache.db`, `data/processed/`, or
+`data/simulated/` don't already exist. Run in this order, each step depends
+on the one before it:
 
-1. Open `simulink/PVOutputSimulation2025a.slx` in MATLAB/Simulink and run
-   `simulink/generate_training_data_all_panels.m` to simulate every panel's
-   hourly output across the historical weather record. This writes the raw
-   simulated dataset (large: several GB).
-2. `scripts/preprocess_weather_data.py` cleans the raw Open-Meteo weather
+1. `simulink/generate_panel_cache.m` characterizes every Solar Cell part in
+   the Simscape Electrical collection (temperature/irradiance curves, IV
+   curve, rated specs) and writes them to `data/raw/panel_cache.db`. This
+   has to run first: step 2 reads the panel list straight out of this
+   database, it doesn't work from the Simulink part collection directly.
+   `data/raw/panel_cache.db` is already committed to this repo, so this
+   step is only needed if you've deleted it or want to regenerate it
+   (e.g. after the part collection changes).
+2. `simulink/generate_training_data_all_panels.m` reads `panel_cache.db`
+   for the list of panels, loads `PVOutputSimulation2025a.slx`, and
+   simulates every panel's hourly output against the historical weather
+   record (`data/raw/weather_data.csv`), writing the raw simulated dataset
+   to `data/simulated/training_data_all_panels.csv` (large: several GB).
+3. `scripts/preprocess_weather_data.py` cleans the raw Open-Meteo weather
    export (`data/raw/weather_data.csv`) and checks it for missing values,
    duplicate timestamps, gaps in the hourly sequence, and out-of-range
    readings.
-3. `scripts/finalize_training_data.py` merges the simulated power data with
+4. `scripts/finalize_training_data.py` merges the simulated power data with
    the cleaned weather data and panel specs into the final training table
    used by every model.
 
