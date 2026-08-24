@@ -228,7 +228,8 @@ forecast_cli.py     Command-line forecast tool
 scripts/            Data preprocessing (weather cleaning, final training table)
 simulink/           MATLAB/Simulink panel simulation models
 training/           One training script per model (random_forest, lstm, arima)
-output/              Evaluation results (tables/) and saved forecast plots (figures/)
+output/tables/      Real evaluation results (MAE/RMSE/MAPE/R2 per model)
+output/figures/     Forecast plots saved by forecast_cli.py (gitignored, regenerated per run)
 data/raw/           Small committed seed data (panel specs, historical weather)
 data/processed/     Generated training data (gitignored)
 data/simulated/     Raw Simulink simulation output (gitignored)

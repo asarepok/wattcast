@@ -22,5 +22,8 @@ models/
 simulink/*.autosave
 *.db
 
+# Ad-hoc plots forecast_cli.py saves per run, not deliberate results
+output/figures/
+
 # Local scratch/logs
 *.log
