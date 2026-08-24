@@ -1365,7 +1365,7 @@
     var detailContainer = document.getElementById("detail-charts");
     detailContainer.innerHTML = "";
     buildMetric(detailContainer, {
-      title: "Power (W)", color: "var(--sun-strong)", values: power, zeroBased: true,
+      title: "Forecast (W)", color: "var(--sun-strong)", values: power, zeroBased: true,
       ref: ratedTotal, refLabel: "Rated capacity &middot; " + ratedTotal.toLocaleString() + " W",
       annotatePeak: true, peakLabel: Math.round(peakVal).toLocaleString() + " W",
       compareValues: simulatedValues, compareColor: "var(--ink)", compareLabel: "Simulated (W)",
@@ -1388,7 +1388,7 @@
     // can have a simulated comparison without ever having weather of
     // its own, see backend/app.py), so the header/rows are built from
     // both rather than one flag implying the other.
-    var headerCells = "<th>When</th><th>Power</th>";
+    var headerCells = "<th>When</th><th>Forecast</th>";
     if (hasSimulated) headerCells += "<th>Simulated</th>";
     if (hasWeather) headerCells += "<th>Irradiance</th><th>Temp</th>";
     document.getElementById("hourly-thead").innerHTML = "<tr>" + headerCells + "</tr>";
