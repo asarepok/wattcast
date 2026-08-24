@@ -762,13 +762,21 @@
     border-radius: 50%;
     margin-right: 6px;
   }
-  .metric-ref { font-size: 0.74rem; color: var(--ink-faint); }
+  .metric-ref { font-size: 0.74rem; color: var(--ink-faint); display: flex; align-items: center; gap: 6px; }
+  .metric-compare-label { display: inline-flex; align-items: center; }
+  .swatch-dotted {
+    display: inline-block;
+    width: 10px; height: 0;
+    border-top: 1.5px dotted;
+    margin-right: 6px;
+  }
 
   .metric-block svg { width: 100%; height: auto; display: block; overflow: visible; }
 
   .metric-grid { stroke: var(--border); stroke-width: 1; }
   .metric-day-divider { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
   .metric-line { fill: none; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+  .metric-line-compare { stroke-width: 1.75; stroke-dasharray: 1 4; }
   .metric-ref-line { fill: none; stroke: var(--ink-faint); stroke-width: 1.25; stroke-dasharray: 5 4; }
   .metric-tick { font-size: 10px; fill: var(--ink-faint); font-family: "Public Sans", sans-serif; }
   .metric-peak { fill: var(--surface); stroke-width: 2.25; }

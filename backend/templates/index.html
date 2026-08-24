@@ -353,19 +353,11 @@
       <p class="modal-intro">Each engine is scored against real weather data it never trained on. Lower error and a higher R&sup2; both mean a closer match to actual output.</p>
 
       <div class="applied-section">
-        <h3>What this means for your forecast</h3>
-        <p class="applied-intro">Your current forecast peaks at <strong id="applied-peak-value">1,980 W</strong>. Applying each engine's typical error (its MAE, from the table below) to that number shows how far off the real output could actually land.</p>
-        <div class="applied-row">
-          <div class="applied-engine"><span class="swatch" style="background:var(--sun-strong)"></span>Random Forest</div>
-          <div class="applied-range"><strong id="applied-range-rf">1,979.9 to 1,980.1 W</strong><span>&plusmn;0.11 W typical error</span></div>
-        </div>
-        <div class="applied-row">
-          <div class="applied-engine"><span class="swatch" style="background:var(--sky)"></span>LSTM</div>
-          <div class="applied-range"><strong id="applied-range-lstm">1,978.7 to 1,981.3 W</strong><span>&plusmn;1.33 W typical error</span></div>
-        </div>
-        <div class="applied-row">
-          <div class="applied-engine"><span class="swatch" style="background:var(--dusk)"></span>ARIMA</div>
-          <div class="applied-range"><strong id="applied-range-arima">1,916.0 to 2,044.0 W</strong><span>&plusmn;64.0 W typical error</span></div>
+        <h3>How this forecast actually did</h3>
+        <p class="applied-intro" id="applied-intro-text">Run a forecast to see it compared against the real Simscape Electrical simulation on the same weather.</p>
+        <div class="applied-row" id="applied-live-row" hidden>
+          <div class="applied-engine"><span class="swatch" id="applied-engine-swatch"></span><span id="applied-engine-name">Random Forest</span></div>
+          <div class="applied-range"><strong id="applied-live-error">&plusmn;0.00 W</strong><span id="applied-live-detail">typical error on this forecast</span></div>
         </div>
       </div>
 

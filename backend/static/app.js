@@ -662,18 +662,29 @@
     loadingView.hidden = false;
     status.textContent = "Fetching live weather for " + loc + "…";
 
-    var messageTimer = setTimeout(function () {
+    var messageTimer1 = setTimeout(function () {
       status.textContent = "Running " + engine + " inference…";
     }, 700);
+    // The ML prediction above is normally done well before this fires;
+    // if it hasn't, the real bottleneck is almost always the live
+    // Simscape simulation running concurrently with it (a cold MATLAB
+    // engine start alone takes ~25-30s, see common/simulation.py), so
+    // say so rather than leaving the same inference message sitting
+    // there looking stuck.
+    var messageTimer2 = setTimeout(function () {
+      status.textContent = "Comparing against a live simulation, this can take a minute the first time…";
+    }, 4000);
 
     fetchAndRenderForecast(false)
       .then(function () {
-        clearTimeout(messageTimer);
+        clearTimeout(messageTimer1);
+        clearTimeout(messageTimer2);
         loadingView.hidden = true;
         onSuccess();
       })
       .catch(function (err) {
-        clearTimeout(messageTimer);
+        clearTimeout(messageTimer1);
+        clearTimeout(messageTimer2);
         loadingView.hidden = true;
         flowView.hidden = false;
         wizardError.textContent = err.message;
@@ -980,8 +991,6 @@
     });
   }
 
-  function fmt1(n) { return Number(n).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
-
   // detail chart builder (power / irradiance / temperature)
   // vals spans however many days are selected (24 * numDays entries),
   // rendered as one continuous line. Day boundaries get a faint
@@ -1019,16 +1028,34 @@
       var dx = X(dv * 24);
       svgParts.push('<line class="metric-day-divider" x1="' + dx + '" x2="' + dx + '" y1="' + padTop + '" y2="' + (padTop + plotH) + '"/>');
     }
-    if (opts.showAxis) {
-      var labelStep = numDays <= 5 ? 1 : (numDays <= 10 ? 2 : 3);
-      for (var dd = 0; dd < numDays; dd += labelStep) {
-        var midX = X(Math.min(dd * 24 + 12, vals.length - 1));
-        svgParts.push('<text class="metric-tick" x="' + midX + '" y="' + (h - 6) + '" text-anchor="middle">' + opts.dayLabels[dd] + '</text>');
+    // Hour-level ticks, not just one day-name label per day: a step
+    // chosen to keep roughly 6-8 ticks total whether this is a single
+    // day or a full 14-day range. Midnight ticks show the date (since
+    // that's the one moment worth naming the day at all); every other
+    // tick just shows the time, so reading across the comparison line
+    // below doesn't require counting hours by eye.
+    if (opts.showAxis && opts.timestamps) {
+      var stepOptions = [1, 2, 3, 4, 6, 8, 12, 24, 48, 72];
+      var hourStep = stepOptions[stepOptions.length - 1];
+      for (var s = 0; s < stepOptions.length; s++) {
+        if (Math.ceil(vals.length / stepOptions[s]) <= 8) { hourStep = stepOptions[s]; break; }
+      }
+      for (var hh = 0; hh < vals.length; hh += hourStep) {
+        var tickX = X(hh);
+        var tickT = opts.timestamps[hh];
+        var tickLabel = tickT.getHours() === 0
+          ? MONTH[tickT.getMonth()] + " " + tickT.getDate()
+          : String(tickT.getHours()).padStart(2, "0") + ":00";
+        svgParts.push('<text class="metric-tick" x="' + tickX + '" y="' + (h - 6) + '" text-anchor="middle">' + tickLabel + '</text>');
       }
     }
     if (opts.ref) {
       var ry = Y(opts.ref);
       svgParts.push('<line class="metric-ref-line" x1="' + padLeft + '" x2="' + w + '" y1="' + ry + '" y2="' + ry + '"/>');
+    }
+    if (opts.compareValues) {
+      var comparePts = opts.compareValues.map(function (v, i) { return { x: X(i), y: Y(v) }; });
+      svgParts.push('<path class="metric-line metric-line-compare" d="' + smoothLine(comparePts) + '" stroke="' + opts.compareColor + '"/>');
     }
     svgParts.push('<path class="metric-line" d="' + line + '" stroke="' + opts.color + '"/>');
     if (opts.annotatePeak) {
@@ -1037,12 +1064,21 @@
       svgParts.push('<text class="metric-peak-label" x="' + pts[peakIdx].x + '" y="' + (pts[peakIdx].y - 10) + '" text-anchor="middle" fill="var(--ink)">' + opts.peakLabel + '</text>');
     }
 
+    var refBits = [];
+    if (opts.ref) refBits.push('<span>' + opts.refLabel + '</span>');
+    if (opts.compareValues) {
+      refBits.push(
+        '<span class="metric-compare-label"><span class="swatch swatch-dotted" style="border-color:' +
+        opts.compareColor + '"></span>' + opts.compareLabel + '</span>'
+      );
+    }
+
     var block = document.createElement("div");
     block.className = "metric-block";
     block.innerHTML =
       '<div class="metric-head">' +
         '<div class="metric-title"><span class="swatch" style="background:' + opts.color + '"></span>' + opts.title + '</div>' +
-        (opts.ref ? '<div class="metric-ref">' + opts.refLabel + '</div>' : '') +
+        (refBits.length ? '<div class="metric-ref">' + refBits.join(" &middot; ") + '</div>' : '') +
       '</div>' +
       '<svg viewBox="0 0 ' + w + ' ' + h + '">' + svgParts.join("") + '</svg>';
     container.appendChild(block);
@@ -1095,9 +1131,35 @@
     }));
   }
 
-  // Fetches a real forecast from /api/forecast (backend/app.py, which
-  // just wraps common/inference.py's predict_with_weather()) and
-  // renders it. Called after finishing setup, after the dashboard's
+  // Every caller below shows err.message straight in the UI on a
+  // rejection, so every rejection reaching them has to already be a
+  // clean, written-for-humans message. fetch() itself rejecting
+  // (offline, DNS failure, server unreachable) throws a raw TypeError
+  // like "Failed to fetch", and a malformed response body throws a
+  // raw JSON SyntaxError. Both get caught here and replaced before
+  // they can leak through, for both the job-start and poll requests.
+  function fetchJson(fetchPromise) {
+    return fetchPromise
+      .catch(function () {
+        throw new Error("Couldn't reach the server. Check your connection and try again.");
+      })
+      .then(function (res) {
+        return res.json()
+          .catch(function () {
+            throw new Error("Received an unreadable response from the server. Please try again.");
+          })
+          .then(function (data) {
+            if (!res.ok) throw new Error(data.error || "Something went wrong.");
+            return data;
+          });
+      });
+  }
+
+  // Fetches a real forecast via backend/app.py's /api/forecast/jobs:
+  // one request kicks off the ML prediction and the live Simscape
+  // simulation together, running concurrently, and this polls until
+  // both are ready rather than holding one long request open the
+  // whole time. Called after finishing setup, after the dashboard's
   // date popover completes a range, and on Update forecast.
   // forceRefresh skips the cache entirely: Update forecast always
   // passes true, since asking for an update should always ask.
@@ -1125,30 +1187,29 @@
       params.set("lat", flow.latitude);
       params.set("lon", flow.longitude);
     }
-    // Every caller of this function (showLoadingScreen, Update
-    // forecast, the dashboard's date popover) shows err.message
-    // straight in the UI on a rejection, so every rejection reaching
-    // them has to already be a clean, written-for-humans message.
-    // fetch() itself rejecting (offline, DNS failure, server
-    // unreachable) throws a raw TypeError like "Failed to fetch", and
-    // a malformed response body throws a raw JSON SyntaxError. Both
-    // get caught here and replaced before they can leak through.
-    return fetch("/api/forecast?" + params.toString())
-      .catch(function () {
-        throw new Error("Couldn't reach the server. Check your connection and try again.");
+
+    return fetchJson(fetch("/api/forecast/jobs?" + params.toString(), { method: "POST" }))
+      .then(function (started) {
+        return new Promise(function (resolve, reject) {
+          function poll() {
+            fetchJson(fetch("/api/forecast/jobs/" + started.job_id))
+              .then(function (data) {
+                if (data.status === "pending") {
+                  setTimeout(poll, 900);
+                  return;
+                }
+                resolve(data);
+              })
+              .catch(reject);
+          }
+          poll();
+        });
       })
-      .then(function (res) {
-        return res.json()
-          .catch(function () {
-            throw new Error("Received an unreadable response from the server. Please try again.");
-          })
-          .then(function (data) {
-            if (!res.ok) throw new Error(data.error || "Something went wrong.");
-            renderForecast(data);
-            saveForecastCache(model, data);
-            showClockContext(new Date());
-            return data;
-          });
+      .then(function (data) {
+        renderForecast(data);
+        saveForecastCache(model, data);
+        showClockContext(new Date());
+        return data;
       });
   }
 
@@ -1243,16 +1304,23 @@
       if (reduceMotion) { path.style.animation = "none"; path.style.strokeDashoffset = 0; }
     })();
 
-    // detail charts. ARIMA never sees weather (data.weather is
-    // null), so only the power chart renders and it takes the bottom
-    // axis treatment itself instead of leaving the chart without one.
+    // detail charts. ARIMA never sees weather (data.weather is null),
+    // so only the power chart renders. The power chart always gets its
+    // own time/date axis now (not just when it's the only chart in the
+    // stack), since that's the one showing the simulated comparison
+    // line and reading exactly when it diverges needs real ticks, not
+    // just whichever chart happens to be at the bottom.
+    var hasSimulated = !!data.simulated;
+    var simulatedValues = hasSimulated ? data.simulated.map(function (s) { return s.watts; }) : null;
+
     var detailContainer = document.getElementById("detail-charts");
     detailContainer.innerHTML = "";
     buildMetric(detailContainer, {
       title: "Power (W)", color: "var(--sun-strong)", values: power, zeroBased: true,
       ref: ratedTotal, refLabel: "Rated capacity &middot; " + ratedTotal.toLocaleString() + " W",
       annotatePeak: true, peakLabel: Math.round(peakVal).toLocaleString() + " W",
-      showAxis: !hasWeather, dayLabels: dayLabels
+      compareValues: simulatedValues, compareColor: "var(--dusk)", compareLabel: "Simulated (ground truth)",
+      showAxis: true, timestamps: timestamps
     });
     if (hasWeather) {
       buildMetric(detailContainer, {
@@ -1261,7 +1329,7 @@
       });
       buildMetric(detailContainer, {
         title: "Temperature (&deg;C)", color: "var(--dusk)", values: temperature, zeroBased: false,
-        showAxis: true, dayLabels: dayLabels
+        showAxis: true, timestamps: timestamps
       });
     }
     var outlookLabel = (numDays === 1 ? "24-hour" : numDays + "-day") + (hasWeather ? " outlook" : " trend (no weather)");
@@ -1302,10 +1370,33 @@
         : "on " + DOW[peakTime.getDay()] + " " + MONTH[peakTime.getMonth()] + " " + peakTime.getDate());
     document.getElementById("capacity-bar-fill").style.width = Math.min(100, pct) + "%";
 
-    // applied-to-your-forecast section in the performance modal
-    document.getElementById("applied-peak-value").textContent = Math.round(peakVal).toLocaleString() + " W";
-    [["applied-range-rf", 0.11], ["applied-range-lstm", 1.33], ["applied-range-arima", 64.0]].forEach(function (pair) {
-      document.getElementById(pair[0]).textContent = fmt1(peakVal - pair[1]) + " to " + fmt1(peakVal + pair[1]) + " W";
-    });
+    // applied-to-your-forecast section in the performance modal: real
+    // accuracy for this exact forecast (data.live_metrics, computed
+    // server-side against the actual simulation on this same weather),
+    // not a projection from old training-time metrics applied to
+    // today's peak.
+    var appliedRow = document.getElementById("applied-live-row");
+    if (data.live_metrics && hasSimulated) {
+      var modelNames = { random_forest: "Random Forest", lstm: "LSTM", arima: "ARIMA" };
+      var modelColors = { random_forest: "var(--sun-strong)", lstm: "var(--sky)", arima: "var(--dusk)" };
+      var modelName = modelNames[data.model] || data.model;
+      var simPeak = Math.max.apply(null, simulatedValues);
+
+      document.getElementById("applied-intro-text").innerHTML =
+        modelName + " predicted a peak of <strong>" + Math.round(peakVal).toLocaleString() + " W</strong>. " +
+        "The actual Simscape Electrical simulation on this same weather peaked at <strong>" +
+        Math.round(simPeak).toLocaleString() + " W</strong>.";
+      document.getElementById("applied-engine-swatch").style.background = modelColors[data.model] || modelColors.random_forest;
+      document.getElementById("applied-engine-name").textContent = modelName;
+      document.getElementById("applied-live-error").textContent =
+        "±" + data.live_metrics.MAE.toFixed(2) + " W";
+      document.getElementById("applied-live-detail").textContent =
+        "typical error on this forecast (RMSE " + data.live_metrics.RMSE.toFixed(2) + " W)";
+      appliedRow.hidden = false;
+    } else {
+      document.getElementById("applied-intro-text").textContent =
+        "The live simulation comparison wasn't available for this forecast.";
+      appliedRow.hidden = true;
+    }
   }
 })();
