@@ -181,12 +181,16 @@ Only needed if `data/raw/panel_cache.db`, `data/processed/`, or
 `data/simulated/` are missing, everything above is already committed and
 trained. In order:
 
-1. `simulink/generate_panel_cache.m` (see "Where the panels come from")
-2. `simulink/generate_training_data_all_panels.m` (see "Running the
-   simulation")
-3. `scripts/preprocess_weather_data.py` and `scripts/finalize_training_data.py`
-   (see "Where the weather comes from" and "Running the simulation")
-4. Whichever `training/train_*.py` script you need (see "Training three
+1. `scripts/preprocess_weather_data.py` to sanity-check the raw weather
+   export first (see "Where the weather comes from"). Not a hard
+   dependency of the steps below, just worth doing before spending
+   simulation time on a bad weather file.
+2. `simulink/generate_panel_cache.m` (see "Where the panels come from")
+3. `simulink/generate_training_data_all_panels.m`, which needs step 2's
+   database to already exist (see "Running the simulation")
+4. `scripts/finalize_training_data.py`, which needs step 3's simulation
+   output to already exist (see "Running the simulation")
+5. Whichever `training/train_*.py` script you need (see "Training three
    different models")
 
 Needs MATLAB R2025a or R2025b for the Simulink steps:
