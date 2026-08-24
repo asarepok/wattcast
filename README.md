@@ -105,8 +105,12 @@ Real evaluation results from the last training run (see `output/tables/`):
 | Model | MAE (W) | RMSE (W) | MAPE (%) | R2 |
 |---|---|---|---|---|
 | Random Forest | 0.11 | 0.27 | 0.72 | 0.99999 |
-| LSTM | 1.33 | 2.11 | 5.85 | 0.9996 |
-| ARIMA (avg across 3 panels) | 69.3 | 78.9 | 54.6 | 0.18 |
+| LSTM | 1.33 | 2.11 | 5.85 | 0.99960 |
+| ARIMA (avg across 3 panels) | 69.31 | 78.96 | 54.64 | 0.17663 |
+
+R2 is shown to 5 decimal places specifically because Random Forest's real
+value (0.9999935870843596) is not exactly 1.0, and rounding it to fewer
+decimals would misleadingly suggest a perfect fit.
 
 ARIMA trails the other two by a wide margin because it never sees weather;
 it can only extrapolate a panel's own past output forward in time. It's kept
