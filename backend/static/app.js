@@ -1053,11 +1053,19 @@
       var ry = Y(opts.ref);
       svgParts.push('<line class="metric-ref-line" x1="' + padLeft + '" x2="' + w + '" y1="' + ry + '" y2="' + ry + '"/>');
     }
-    if (opts.compareValues) {
-      var comparePts = opts.compareValues.map(function (v, i) { return { x: X(i), y: Y(v) }; });
-      svgParts.push('<path class="metric-line metric-line-compare" d="' + smoothLine(comparePts) + '" stroke="' + opts.compareColor + '"/>');
-    }
     svgParts.push('<path class="metric-line" d="' + line + '" stroke="' + opts.color + '"/>');
+    if (opts.compareValues) {
+      // Small dots at each real hourly point, not a continuous stroke:
+      // a stroke wide enough to guarantee visibility when the two
+      // series are pixel-identical (which they often are here) reads
+      // as a thick, muddy halo. Dots drawn on top stay compact and
+      // legible either way, sitting quietly on the line where the
+      // values agree and standing off it exactly where they don't.
+      var compareDots = opts.compareValues.map(function (v, i) {
+        return '<circle class="metric-compare-dot" cx="' + X(i) + '" cy="' + Y(v) + '" r="2"/>';
+      }).join("");
+      svgParts.push('<g fill="' + opts.compareColor + '">' + compareDots + '</g>');
+    }
     if (opts.annotatePeak) {
       var peakIdx = vals.indexOf(Math.max.apply(null, vals));
       svgParts.push('<circle class="metric-peak" cx="' + pts[peakIdx].x + '" cy="' + pts[peakIdx].y + '" r="4" stroke="' + opts.color + '"/>');
@@ -1319,7 +1327,7 @@
       title: "Power (W)", color: "var(--sun-strong)", values: power, zeroBased: true,
       ref: ratedTotal, refLabel: "Rated capacity &middot; " + ratedTotal.toLocaleString() + " W",
       annotatePeak: true, peakLabel: Math.round(peakVal).toLocaleString() + " W",
-      compareValues: simulatedValues, compareColor: "var(--dusk)", compareLabel: "Simulated (ground truth)",
+      compareValues: simulatedValues, compareColor: "var(--ink)", compareLabel: "Simulated (ground truth)",
       showAxis: true, timestamps: timestamps
     });
     if (hasWeather) {
@@ -1335,16 +1343,24 @@
     var outlookLabel = (numDays === 1 ? "24-hour" : numDays + "-day") + (hasWeather ? " outlook" : " trend (no weather)");
     document.getElementById("detail-hint").textContent = outlookLabel;
 
-    // hourly table
-    document.getElementById("hourly-thead").innerHTML = hasWeather
-      ? "<tr><th>When</th><th>Power</th><th>Irradiance</th><th>Temp</th></tr>"
-      : "<tr><th>When</th><th>Power</th></tr>";
+    // hourly table. hasSimulated and hasWeather are independent (ARIMA
+    // can have a simulated comparison without ever having weather of
+    // its own, see backend/app.py), so the header/rows are built from
+    // both rather than one flag implying the other.
+    var headerCells = "<th>When</th><th>Power</th>";
+    if (hasSimulated) headerCells += "<th>Simulated</th>";
+    if (hasWeather) headerCells += "<th>Irradiance</th><th>Temp</th>";
+    document.getElementById("hourly-thead").innerHTML = "<tr>" + headerCells + "</tr>";
+
     var tbody = document.getElementById("hourly-body");
     var rows = power.map(function (v, i) {
       var t = timestamps[i];
       var cls = i === peakIdx ? ' class="peak-row"' : "";
       var when = DOW[t.getDay()] + " " + t.getDate() + ", " + String(t.getHours()).padStart(2, "0") + ":00";
       var cells = "<td>" + when + "</td><td class=\"tnum\">" + Math.round(v).toLocaleString() + " W</td>";
+      if (hasSimulated) {
+        cells += "<td class=\"tnum\">" + Math.round(simulatedValues[i]).toLocaleString() + " W</td>";
+      }
       if (hasWeather) {
         cells += "<td class=\"tnum\">" + irradiance[i].toFixed(1) + " W/m&sup2;</td><td class=\"tnum\">" + temperature[i].toFixed(1) + "&deg;C</td>";
       }
