@@ -210,6 +210,13 @@ MATLAB R2025a. If you're on R2025b, install `matlabengine==25.2.2`
 instead, matching your installed MATLAB version exactly, or every
 `matlab.engine` call will fail to start.
 
+Unlike the `.m` scripts above, `common/simulation.py` (what the
+dashboard and CLI actually call) picks between the two model files
+itself: it asks the running MATLAB engine for its release and loads
+`PVOutputSimulation2025a.slx` or `PVOutputSimulation.slx` accordingly,
+so there's nothing to configure by hand there, just install the
+matching `matlabengine` version above.
+
 ## What's not in this repo
 
 Three things, all regenerable from what IS committed here, left out via

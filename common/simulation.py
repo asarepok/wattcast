@@ -31,10 +31,18 @@ import pandas as pd
 SIMULINK_DIR = os.path.join(os.path.dirname(__file__), "..", "simulink")
 PANEL_DB = os.path.join(os.path.dirname(__file__), "..", "data", "raw", "panel_cache.db")
 
-MODEL_NAME = "PVOutputSimulation2025a"
-SOLAR_BLOCK = f"{MODEL_NAME}/Solar Cell"
+# Which .slx file to load depends on the MATLAB release actually running
+# this process, not on whatever machine trained the model, so it's
+# detected from the engine itself rather than hardcoded (see README:
+# PVOutputSimulation2025a.slx is for R2025a, PVOutputSimulation.slx is
+# for R2025b).
+MODEL_NAME_BY_RELEASE = {
+    "2025a": "PVOutputSimulation2025a",
+    "2025b": "PVOutputSimulation",
+}
 
 _engine = None
+_model_name = None
 
 
 def _get_engine():
@@ -45,10 +53,18 @@ def _get_engine():
     import time, since importing this module shouldn't require MATLAB
     to already be running.
     """
-    global _engine
+    global _engine, _model_name
     if _engine is None:
         _engine = matlab.engine.start_matlab()
-        model_path = os.path.join(SIMULINK_DIR, MODEL_NAME + ".slx")
+        release = _engine.eval("version('-release')", nargout=1)
+        if release not in MODEL_NAME_BY_RELEASE:
+            raise RuntimeError(
+                f"No Simulink model file for MATLAB release {release!r}; "
+                f"only {sorted(MODEL_NAME_BY_RELEASE)} are supported. "
+                "See the README's MATLAB setup section."
+            )
+        _model_name = MODEL_NAME_BY_RELEASE[release]
+        model_path = os.path.join(SIMULINK_DIR, _model_name + ".slx")
         _engine.eval(f"load_system('{model_path}');", nargout=0)
     return _engine
 
@@ -127,13 +143,14 @@ def run_simulation(part_id, weather_df):
     eng.workspace["temperaturePoints"] = matlab.double(temperature_points)
     eng.workspace["vmpPoints"] = matlab.double(vmp_points)
 
+    solar_block = f"{_model_name}/Solar Cell"
     eng.workspace["tmpPartId"] = part_id
     eng.eval(
-        f'partrepo.collection.applyDataSet("{SOLAR_BLOCK}", "SimscapeElectrical", tmpPartId);',
+        f'partrepo.collection.applyDataSet("{solar_block}", "SimscapeElectrical", tmpPartId);',
         nargout=0,
     )
 
-    eng.eval(f"tmpOut = sim('{MODEL_NAME}');", nargout=0)
+    eng.eval(f"tmpOut = sim('{_model_name}');", nargout=0)
     eng.eval("tmpSimPower = tmpOut.sim_power(:);", nargout=0)
     sim_power = np.array(eng.workspace["tmpSimPower"]).ravel()
 
