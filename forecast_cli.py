@@ -23,6 +23,7 @@ import pandas as pd
 from common.dataset import EXCLUDED_PART_IDS
 from common.inference import get_panel_specs, predict_with_weather
 from common.simulation import run_simulation
+from common.weather_api import get_forecast
 
 # Rated Pmax on any datasheet is measured at Standard Test Conditions:
 # 1000 W/m^2 irradiance, 25C cell temperature. Shown as a reference line
@@ -348,14 +349,26 @@ def main():
     except (ValueError, NotImplementedError) as e:
         raise SystemExit(f"\nError: {e}")
 
-    # Every forecast against real weather also gets checked against the
-    # actual Simscape Electrical simulation on that same weather, not
-    # just the model's own idea of what it should be. ARIMA has no
-    # weather to match a simulation against in the first place, so this
-    # is skipped for it. A first run pays MATLAB's own startup cost
+    # Every forecast, regardless of model, gets checked against the
+    # actual Simscape Electrical simulation on the real weather for that
+    # date. ARIMA never takes weather as an input, but that's exactly
+    # why this comparison matters most for it: it shows what the panel
+    # actually produced next to ARIMA's weather-blind guess. So weather
+    # gets fetched here too when the model itself didn't already fetch
+    # it, purely for this comparison, not fed into ARIMA's own
+    # prediction. A first simulation run pays MATLAB's own startup cost
     # (engine + model load, under a minute); it's cached in
     # common/simulation.py, so any later forecast in this same process
     # is fast.
+    if weather is None:
+        try:
+            # .set_index("time") to match predict_with_weather()'s own
+            # returned weather shape for RF/LSTM, since print_forecast()
+            # below does weather.loc[timestamp, column] either way.
+            weather = get_forecast(date, None).set_index("time")
+        except Exception as e:
+            print(f"Couldn't fetch weather for the simulation comparison: {e}")
+
     simulated = None
     if weather is not None:
         print(f"Running live Simulink simulation on the same weather for comparison "
