@@ -770,7 +770,9 @@
   .metric-grid { stroke: var(--border); stroke-width: 1; }
   .metric-day-divider { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
   .metric-line { fill: none; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
-  .metric-line-compare { fill: none; stroke-width: 1.75; stroke-linejoin: round; }
+  .metric-line-compare { fill: none; stroke-width: 1.25; opacity: 0.7; }
+  .metric-compare-stem { stroke-width: 1; opacity: 0.35; }
+  .metric-compare-dot { stroke: var(--surface); stroke-width: 1; }
   /* Partial opacity on purpose: two of these stacked (the model's
      forecast and the simulated comparison) is what makes their overlap
      blend into a visibly distinct third color, the actual point of

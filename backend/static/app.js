@@ -982,18 +982,16 @@
     return d;
   }
 
-  // Holds each point's value flat until the next one, then steps: the
-  // honest shape for an hourly reading (it's not actually smoothly
-  // continuous between hours, that value just held for that whole
-  // hour), unlike smoothLine()'s curve fit, which implies a
-  // continuity the data doesn't really have. Segments share endpoints
-  // (no gaps between one hour's top and the next), so this reads as a
-  // single joined silhouette, not a row of disconnected bars.
-  function stepLine(points) {
+  // Straight segments between consecutive points, not curve-fit: the
+  // connecting line in a discrete-signal (stem) plot is conventionally
+  // piecewise-linear. Smoothing it would reintroduce exactly the false
+  // continuity a stem plot exists to avoid, since these are individual
+  // hourly samples, not a continuously-varying quantity.
+  function straightLine(points) {
     if (points.length < 2) return "";
     var d = "M " + points[0].x + "," + points[0].y;
     for (var i = 1; i < points.length; i++) {
-      d += " L " + points[i].x + "," + points[i - 1].y + " L " + points[i].x + "," + points[i].y;
+      d += " L " + points[i].x + "," + points[i].y;
     }
     return d;
   }
@@ -1076,16 +1074,17 @@
     // (plain alpha compositing, no special blend mode needed), so
     // agreement between the two series reads directly as a color, not
     // something you have to infer from how close two lines look.
-    // Simulated is stepped, not curve-fit like the main line: it's an
-    // hourly reading, not a continuous quantity, so smoothly
-    // interpolating between hours would just be inventing shape the
-    // data doesn't have. Segments share endpoints, so this still reads
-    // as one joined silhouette, never a row of disconnected bars.
+    //
+    // Simulated is drawn as a discrete-signal (stem) plot, the
+    // conventional way to show individual samples rather than a
+    // continuously-varying quantity: a stem dropped to the baseline at
+    // every real hourly point, a dot at its top, and those tops joined
+    // by a plain straight line (never curve-fit, see straightLine()).
     var baseline = Y(min);
     if (opts.compareValues) {
       var comparePts = opts.compareValues.map(function (v, i) { return { x: X(i), y: Y(v) }; });
-      var compareStep = stepLine(comparePts);
-      var compareArea = compareStep +
+      var compareLine = straightLine(comparePts);
+      var compareArea = compareLine +
         " L " + comparePts[comparePts.length - 1].x + "," + baseline +
         " L " + comparePts[0].x + "," + baseline + " Z";
       svgParts.push('<path class="metric-area" fill="' + opts.compareColor + '" d="' + compareArea + '"/>');
@@ -1094,7 +1093,15 @@
     svgParts.push('<path class="metric-area" fill="' + opts.color + '" d="' + powerArea + '"/>');
 
     if (opts.compareValues) {
-      svgParts.push('<path class="metric-line-compare" d="' + compareStep + '" stroke="' + opts.compareColor + '"/>');
+      var compareStems = comparePts.map(function (p) {
+        return '<line x1="' + p.x + '" x2="' + p.x + '" y1="' + baseline + '" y2="' + p.y + '"/>';
+      }).join("");
+      svgParts.push('<g class="metric-compare-stem" stroke="' + opts.compareColor + '">' + compareStems + '</g>');
+      svgParts.push('<path class="metric-line-compare" d="' + compareLine + '" stroke="' + opts.compareColor + '"/>');
+      var compareDots = comparePts.map(function (p) {
+        return '<circle cx="' + p.x + '" cy="' + p.y + '" r="2.5"/>';
+      }).join("");
+      svgParts.push('<g class="metric-compare-dot" fill="' + opts.compareColor + '">' + compareDots + '</g>');
     }
     svgParts.push('<path class="metric-line" d="' + line + '" stroke="' + opts.color + '"/>');
     if (opts.annotatePeak) {
