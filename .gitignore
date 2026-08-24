@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+.venv/
+
+# OS
+.DS_Store
+
+# Large generated data (regenerate via simulink/ and scripts/, see README)
+data/processed/
+data/simulated/
+
+# Trained models (regenerate via training/, see README)
+models/
+
+# Simulink build artifacts
+simulink/slprj/
+simulink/*.slxc
+simulink/panel_cache.db
+
+# Local scratch/logs
+*.log
