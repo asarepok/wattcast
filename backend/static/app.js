@@ -1005,6 +1005,24 @@
     });
   }
 
+  // A fresh top-to-bottom fade per area fill, dark (more opaque) at
+  // the line itself down to light (nearly transparent) at the
+  // baseline, same technique the hero chart already uses for its own
+  // fill. Each call needs its own <linearGradient> id (SVG gradients
+  // are referenced by id, and buildMetric() runs several times per
+  // render), so this both defines the gradient and hands back the
+  // fill="url(#...)" reference to use for it.
+  var areaGradientSeq = 0;
+  function areaGradientRef(svgParts, color) {
+    var id = "areaGradient" + (areaGradientSeq++);
+    svgParts.push(
+      '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="' + color + '" stop-opacity="0.5"/>' +
+      '<stop offset="1" stop-color="' + color + '" stop-opacity="0.04"/></linearGradient></defs>'
+    );
+    return "url(#" + id + ")";
+  }
+
   // detail chart builder (power / irradiance / temperature)
   // vals spans however many days are selected (24 * numDays entries),
   // rendered as one continuous line. Day boundaries get a faint
@@ -1087,10 +1105,10 @@
       var compareArea = compareLine +
         " L " + comparePts[comparePts.length - 1].x + "," + baseline +
         " L " + comparePts[0].x + "," + baseline + " Z";
-      svgParts.push('<path class="metric-area" fill="' + opts.compareColor + '" d="' + compareArea + '"/>');
+      svgParts.push('<path class="metric-area" fill="' + areaGradientRef(svgParts, opts.compareColor) + '" d="' + compareArea + '"/>');
     }
     var powerArea = line + " L " + pts[pts.length - 1].x + "," + baseline + " L " + pts[0].x + "," + baseline + " Z";
-    svgParts.push('<path class="metric-area" fill="' + opts.color + '" d="' + powerArea + '"/>');
+    svgParts.push('<path class="metric-area" fill="' + areaGradientRef(svgParts, opts.color) + '" d="' + powerArea + '"/>');
 
     if (opts.compareValues) {
       var compareStems = comparePts.map(function (p) {
