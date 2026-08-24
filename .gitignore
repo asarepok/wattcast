@@ -19,6 +19,7 @@ models/
 # Simulink build artifacts
 simulink/slprj/
 simulink/*.slxc
+simulink/*.autosave
 simulink/panel_cache.db
 
 # Local scratch/logs
