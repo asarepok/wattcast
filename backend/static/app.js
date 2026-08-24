@@ -921,7 +921,10 @@
     .then(function (res) { return res.json(); })
     .then(function (perf) {
       function fill(prefix, m) {
-        document.getElementById(prefix + "-r2").textContent = m.R2.toFixed(4);
+        // toFixed(5), not 4: Random Forest's real R2 (0.9999935870843596)
+        // rounds to a misleading "1.0000" at 4 decimals, which reads as a
+        // suspiciously perfect fit instead of the genuine value.
+        document.getElementById(prefix + "-r2").textContent = m.R2.toFixed(5);
         document.getElementById(prefix + "-mae").textContent = m.MAE.toFixed(2) + " W";
         document.getElementById(prefix + "-rmse").textContent = m.RMSE.toFixed(2) + " W";
         document.getElementById(prefix + "-mape").textContent = m.MAPE.toFixed(1) + "%";
