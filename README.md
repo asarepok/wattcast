@@ -5,6 +5,25 @@ three models: Random Forest, LSTM, or ARIMA. Includes a command-line tool, a
 web dashboard ("Wattcast"), and the full pipeline behind them: MATLAB/Simulink
 panel simulation, data preprocessing, model training, and evaluation.
 
+## Screenshots
+
+**Forecast dashboard**, live weather behind an hourly power forecast for a
+chosen panel, quantity, location, and date range:
+
+![Wattcast forecast dashboard](docs/screenshots/dashboard.png)
+
+**Model performance comparison**, real evaluation metrics for all three
+engines, plus what each engine's typical error means for the current
+forecast:
+
+![Model performance modal](docs/screenshots/model-performance.png)
+
+**Simulink panel simulation model**, the Simscape Electrical circuit behind
+every panel's simulated hourly output (irradiance and temperature in,
+current/voltage/power out):
+
+![Simulink block diagram](docs/screenshots/simulink-model.png)
+
 ## How it fits together
 
 ```
